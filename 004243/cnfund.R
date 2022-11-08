@@ -61,6 +61,18 @@ bo_plot <- melt(bm_oil, id.vars = "DATE")[,
 bo_plot %>% ggplot(aes(x = DATE, y = log2(value), col = variable)) + 
   geom_line() #sign of cointegration
 
+bm_oil[, DATE := as.Date(DATE)]
+cor(bm_oil[DATE >= "2022-01-01", "index"], 
+    bm_oil[DATE >= "2022-01-01", "oil"]) #2022 big divergence
+cor(bm_oil[DATE < "2022-01-01", "index"], 
+    bm_oil[DATE < "2022-01-01", "oil"]) #prior 2022 high correlation
+bo_plot[DATE >= "2022-01-01",] %>% 
+  ggplot(aes(x = DATE, y = log2(value), col = variable)) + 
+  geom_line()
+bo_plot[DATE < "2022-01-01",] %>% 
+  ggplot(aes(x = DATE, y = log2(value), col = variable)) + 
+  geom_line()
+
 #vix
 vx <- read_csv("vix.csv")
 names(vx) <- c("DATE","vix")
@@ -99,3 +111,21 @@ busd_plot %>% ggplot(aes(x = DATE, y = log2(value), col = variable)) +
 
 #combined return table
 cmb <- read_csv("returntable.csv")
+cmb <- cmb[-1,]
+plot_cols <- names(cmb)[-c(2, 8, 10, 12, 14)]
+cmb_returns <- cmb[, plot_cols] #selecting all the return cols
+setDT(cmb_returns)
+
+return_plot <- melt(cmb_returns, id.var = "date")[order(date),]
+return_plot %>% ggplot(aes(x = date, y = value, col = variable)) + 
+  geom_line()
+return_plot %>% ggplot(aes(x = date, y = value)) + geom_line() + 
+  facet_wrap(~ variable, scales = "free_y", ncol = 2)
+#seasonality in djsoep returns
+
+oil_usd <- oil[usd, on = "DATE"]
+oil_usd <- oil_usd[-which(is.na(oil_usd$oil)),]
+oil_usd[, DATE := as.Date(DATE)]
+cor(oil_usd$oil, oil_usd$usd)
+ggplot(melt(oil_usd, id.var = "DATE")[order(DATE),], 
+       aes(x = DATE, y = value, col = variable)) + geom_line()
