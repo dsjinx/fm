@@ -1,4 +1,5 @@
 library(tidyverse)
+library(lubridate)
 library(data.table)
 library(caret)
 library(rvest)
@@ -129,3 +130,32 @@ oil_usd[, DATE := as.Date(DATE)]
 cor(oil_usd$oil, oil_usd$usd)
 ggplot(melt(oil_usd, id.var = "DATE")[order(DATE),], 
        aes(x = DATE, y = value, col = variable)) + geom_line()
+
+#yahoo finance
+#query1.finance.yahoo.com/v7/finance/download/IEO?period1=1147046400&period2=1667952000&interval=1d&events=history&includeAdjustedClose=true
+#
+yahoo_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
+                    "IEO",
+                    "?period1=1147046400",
+                    "&period2=1667952000",
+                    "&interval=1d",
+                    "&events=history&includeAdjustedClose=true")
+download.file(paste0("query1.finance.yahoo.com/v7/finance/download/",
+                     "IEO",
+                     "?period1=1592179200",
+                     "&period2=1592524800",
+                     "&interval=1d",
+                     "&events=history",
+                     "./004243/data/sample.csv"))
+#period time is in unix timestamp form
+start_date <- as.numeric(as.Date("2006-05-06"))
+end_date <- as.numeric(today())
+
+djsoep_etf <- "CL=F"
+oil_index <- "IEO"
+gold_index <- "GC=F"
+vis <- "^VIX"
+usdx <- "DXYN"
+
+
+
