@@ -131,7 +131,8 @@ cor(oil_usd$oil, oil_usd$usd)
 ggplot(melt(oil_usd, id.var = "DATE")[order(DATE),], 
        aes(x = DATE, y = value, col = variable)) + geom_line()
 
-#yahoo finance
+#######yahoo finance######
+#basic historical data url
 #query1.finance.yahoo.com/v7/finance/download/IEO?period1=1147046400&period2=1667952000&interval=1d&events=history&includeAdjustedClose=true
 yahoo_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
                     "IEO",
@@ -139,13 +140,7 @@ yahoo_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
                     "&period2=1667952000",
                     "&interval=1d",
                     "&events=history&includeAdjustedClose=true")
-download.file(paste0("query1.finance.yahoo.com/v7/finance/download/",
-                     "IEO",
-                     "?period1=1592179200",
-                     "&period2=1592524800",
-                     "&interval=1d",
-                     "&events=history",
-                     "./004243/data/sample.csv"))
+
 #period time is in unix timestamp form
 start_date <- as.character(
   as.numeric(ISOdate(2006,05,06, hour = 23, min = 59)))
@@ -155,8 +150,17 @@ end_date <- as.character(
 djsoep_etf <- "IEO"
 oil_index <- "CL=F"
 gold_index <- "GC=F"
-vis <- "^VIX"
-usdx <- "DXYN"
+vix <- "^VIX"
+usdx <- "DX-Y.NYB"
+
+etf_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
+                  djsoep_etf,
+                  "?period1=",start_date,
+                  "&period2=",end_date,
+                  "&interval=1d",
+                  "&events=history&includeAdjustedClose=true")
+download.file(etf_url, "./004243/data/etf.csv")
+etf <- read_csv("./004243/data/etf.csv")
 
 oil_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
                     oil_index,
@@ -167,3 +171,59 @@ oil_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
 download.file(oil_url, "./004243/data/oil.csv")
 oil <- read_csv("./004243/data/oil.csv")
 
+gold_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
+                  gold_index,
+                  "?period1=",start_date,
+                  "&period2=",end_date,
+                  "&interval=1d",
+                  "&events=history&includeAdjustedClose=true")
+download.file(gold_url, "./004243/data/gold.csv")
+gold <- read_csv("./004243/data/gold.csv")
+
+vix_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
+                   vix,
+                   "?period1=",start_date,
+                   "&period2=",end_date,
+                   "&interval=1d",
+                   "&events=history&includeAdjustedClose=true")
+download.file(vix_url, "./004243/data/vix.csv")
+vix <- read_csv("./004243/data/vix.csv")
+
+usdx_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
+                  usdx,
+                  "?period1=",start_date,
+                  "&period2=",end_date,
+                  "&interval=1d",
+                  "&events=history&includeAdjustedClose=true")
+download.file(usdx_url, "./004243/data/usdx.csv")
+usdx <- read_csv("./004243/data/usdx.csv")
+
+setDT(etf)
+setDT(oil)
+etf_oil <- oil[etf, on = "Date"]
+#check NAs
+names(etf_oil)
+etf_oil[, lapply(.SD, function(j) sum(is.na(j))), 
+        .SDcols = c("Close", "i.Close")]
+etf_oil[which(is.na(etf_oil$Close)), .(Date, Close, i.Close)]
+wday(etf_oil[which(is.na(etf_oil$Close)), 
+             .(Date, Close, i.Close)]$Date)
+#clean NAs
+etf_oil <- etf_oil[-which(is.na(etf_oil$Close)), 
+                   .(Date, Close, i.Close)]
+etf_oil[, lapply(.SD, function(j) sum(is.na(j)))]
+setnames(etf_oil, names(etf_oil), c("Date", "oil", "etf"))
+names(etf_oil)
+str(etf_oil)
+etf_oil[, oil := as.numeric(oil)]
+etf_oil[, lapply(.SD, function(j) sum(is.na(j)))]
+etf_oil[which(is.na(etf_oil$oil)),] #why there is NA again after clean
+oil[Date %in% c(etf_oil[which(is.na(etf_oil$oil)), Date]), 
+    c("Date", "Close")]
+range(oil$Close) #innate null, so clean them again
+etf_oil <- etf_oil[-which(is.na(etf_oil$oil)),]
+etf_oil[, lapply(.SD, function(j) sum(is.na(j)))] #check again for NAs
+
+ggplot(melt(etf_oil, id.vars = "Date")[order(Date),], 
+       aes(x = Date, y = value, col = variable)) + geom_line()
+cor(etf_oil$oil, etf_oil$etf)
