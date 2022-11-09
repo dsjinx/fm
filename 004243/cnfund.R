@@ -133,7 +133,6 @@ ggplot(melt(oil_usd, id.var = "DATE")[order(DATE),],
 
 #yahoo finance
 #query1.finance.yahoo.com/v7/finance/download/IEO?period1=1147046400&period2=1667952000&interval=1d&events=history&includeAdjustedClose=true
-#
 yahoo_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
                     "IEO",
                     "?period1=1147046400",
@@ -148,14 +147,23 @@ download.file(paste0("query1.finance.yahoo.com/v7/finance/download/",
                      "&events=history",
                      "./004243/data/sample.csv"))
 #period time is in unix timestamp form
-start_date <- as.numeric(as.Date("2006-05-06"))
-end_date <- as.numeric(today())
+start_date <- as.character(
+  as.numeric(ISOdate(2006,05,06, hour = 23, min = 59)))
+end_date <- as.character(
+  as.numeric(ISOdate(2022,11,08, hour = 23, min = 59)))
 
-djsoep_etf <- "CL=F"
-oil_index <- "IEO"
+djsoep_etf <- "IEO"
+oil_index <- "CL=F"
 gold_index <- "GC=F"
 vis <- "^VIX"
 usdx <- "DXYN"
 
-
+oil_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
+                    oil_index,
+                    "?period1=",start_date,
+                    "&period2=",end_date,
+                    "&interval=1d",
+                    "&events=history&includeAdjustedClose=true")
+download.file(oil_url, "./004243/data/oil.csv")
+oil <- read_csv("./004243/data/oil.csv")
 
