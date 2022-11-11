@@ -198,6 +198,7 @@ usdx_url <- paste0("query1.finance.yahoo.com/v7/finance/download/",
 download.file(usdx_url, "./004243/data/usdx.csv")
 usdx <- read_csv("./004243/data/usdx.csv")
 
+#visualising relationship of etf-oil prices
 setDT(etf)
 setDT(oil)
 etf_oil <- oil[etf, on = "Date"]
@@ -228,7 +229,7 @@ ggplot(melt(etf_oil, id.vars = "Date")[order(Date),],
        aes(x = Date, y = value, col = variable)) + geom_line()
 cor(etf_oil$oil, etf_oil$etf)
 
-#return table
+#etf return table
 setDT(etf)
 range(wday(etf$Date)) #all the prices are in mon-fri
 etf_return <- etf[, .(Date, Close)][
@@ -237,6 +238,67 @@ etf_return <- etf[, .(Date, Close)][
          r10d = c(rep(NA, 10), diff(log(Close), 10)), 
          r30d = c(rep(NA, 30), diff(log(Close), 30)),
          r90d = c(rep(NA, 90), diff(log(Close), 90)))]
+#check extra NAs apart for paddings
+etf_return[, lapply(.SD, function(j) sum(is.na(j)))]
 etf_return_plot <- melt(etf_return, id.var = "Date")[order(Date),]
 ggplot(etf_return_plot, aes(Date, value)) + geom_line() +
   facet_wrap(~ variable, scales = "free_y", ncol = 2)
+
+#oil return table
+setDT(oil)
+str(oil) #data are in chr class
+oil_return <- oil[, .(Date, Close)][, Close := as.numeric(Close)]
+str(oil_return)
+oil_return[, lapply(.SD, range)] #there're NAs
+oil_return[, lapply(.SD, function(j) sum(is.na(j)))] #recheck after below
+oil_return <- oil_return[, ":="(r1d = c(NA, diff(log(Close))), 
+         r5d = c(rep(NA, 5), diff(log(Close), 5)),
+         r10d = c(rep(NA, 10), diff(log(Close), 10)), 
+         r30d = c(rep(NA, 30), diff(log(Close), 30)),
+         r90d = c(rep(NA, 90), diff(log(Close), 90)))]
+
+#check for NaNs from original set
+oil_return[, lapply(.SD, function(j) sum(is.nan(j)))]
+nans_ind <- oil_return[, lapply(.SD, function(j) which(is.nan(j)))][,
+                .(r1d, r5d, r10d, r30d, r90d)]
+oil_return[unique(c(nans_ind$r1d, nans_ind$r5d, nans_ind$r10d, nans_ind$r10d,
+       nans_ind$r30d, nans_ind$r90d)),] 
+#nan is caused by negative price incident in 2020
+
+#vix return table
+setDT(vix)
+str(vix)
+vix_return <- vix[, .(Date, Close)][
+  , ":="(r1d = c(NA, diff(log(Close))), 
+         r5d = c(rep(NA, 5), diff(log(Close), 5)),
+         r10d = c(rep(NA, 10), diff(log(Close), 10)), 
+         r30d = c(rep(NA, 30), diff(log(Close), 30)),
+         r90d = c(rep(NA, 90), diff(log(Close), 90)))]
+vix_return[, lapply(.SD, function(j) sum(is.na(j)))] #check NAs
+
+#gold return table
+setDT(gold)
+str(gold)
+gold_return <- gold[, .(Date, Close)][, Close := as.numeric(Close)]
+gold_return <- gold_return[, .(Date, Close)][
+  , ":="(r1d = c(NA, diff(log(Close))), 
+         r5d = c(rep(NA, 5), diff(log(Close), 5)),
+         r10d = c(rep(NA, 10), diff(log(Close), 10)), 
+         r30d = c(rep(NA, 30), diff(log(Close), 30)),
+         r90d = c(rep(NA, 90), diff(log(Close), 90)))]
+gold_return[, lapply(.SD, function(j) sum(is.na(j)))] #excessive number of NAs
+gold_return[, lapply(.SD, function(j) sum(is.nan(j)))] #but no NaNs
+
+#usdx return table
+setDT(usdx)
+str(usdx)
+usd_return <- usdx[, .(Date, Close)][, Close := as.numeric(Close)]
+usd_return <- usd_return[, .(Date, Close)][
+  , ":="(r1d = c(NA, diff(log(Close))), 
+         r5d = c(rep(NA, 5), diff(log(Close), 5)),
+         r10d = c(rep(NA, 10), diff(log(Close), 10)), 
+         r30d = c(rep(NA, 30), diff(log(Close), 30)),
+         r90d = c(rep(NA, 90), diff(log(Close), 90)))]
+usd_return[, lapply(.SD, function(j) sum(is.na(j)))]
+usd_return[, lapply(.SD, function(j) sum(is.nan(j)))]
+#excessive number of NAs but no NaN
