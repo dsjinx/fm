@@ -227,3 +227,16 @@ etf_oil[, lapply(.SD, function(j) sum(is.na(j)))] #check again for NAs
 ggplot(melt(etf_oil, id.vars = "Date")[order(Date),], 
        aes(x = Date, y = value, col = variable)) + geom_line()
 cor(etf_oil$oil, etf_oil$etf)
+
+#return table
+setDT(etf)
+range(wday(etf$Date)) #all the prices are in mon-fri
+etf_return <- etf[, .(Date, Close)][
+  , ":="(r1d = c(NA, diff(log(Close))), 
+         r5d = c(rep(NA, 5), diff(log(Close), 5)),
+         r10d = c(rep(NA, 10), diff(log(Close), 10)), 
+         r30d = c(rep(NA, 30), diff(log(Close), 30)),
+         r90d = c(rep(NA, 90), diff(log(Close), 90)))]
+etf_return_plot <- melt(etf_return, id.var = "Date")[order(Date),]
+ggplot(etf_return_plot, aes(Date, value)) + geom_line() +
+  facet_wrap(~ variable, scales = "free_y", ncol = 2)
