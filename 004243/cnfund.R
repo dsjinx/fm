@@ -316,8 +316,33 @@ data_tbl[, lapply(.SD, function(j) sum(is.na(j))),
          .SDcols = c("usdx", "gold", "vix", "oil", "etf")]
 #delete all the NA rows, because log returns can include all the intra returns
 NA_ind <- lapply(data_tbl[,-1], function(j) which(is.na(j)))
-NA_ind <- unlist(NA_ind) %>% unique()
-data_tbl <- data_tbl[-NA_ind, ]
+NA_ind <- unlist(NA_ind) %>% unique() 
+data_tbl[sort(NA_ind), ]#locate the NA rows
+#do not need to filter the NA values, construct the log return table 1st
+#if any NA return is due to the NA price, then skip the row
+#we only use the cumulative log returns for training, if one return is NA
+#it can be left out without impairing the training
 
 #make a log return table
+return_tbl <- data.table(date = data_tbl$Date,
+                         etf_1d = c(NA, diff(log(data_tbl$etf))),
+                         oil_1d = c(NA, diff(log(data_tbl$oil))),
+                         vix_1d = c(NA, diff(log(data_tbl$vix))),
+                         gold_1d = c(NA, diff(log(data_tbl$gold))),
+                         usdx_1d = c(NA, diff(log(data_tbl$usdx)))
+                         )
+head(return_tbl)
+return_tbl[, -1][, lapply(.SD, function(j) sum(is.na(j)))]
+#the NaN is counted as NA, so check NaN along for extreme data
+return_tbl[, -1][, lapply(.SD, function(j) sum(is.nan(j)))]
+#check the NAs and NaNs
+rNAs_ind <- lapply(return_tbl, function(j) which(is.na(j)))
+rNAs_ind <- unlist(rNAs_ind) %>% unique()
+return_tbl[sort(rNAs_ind),]
+data_tbl[sort(rNAs_ind),] #check the cause of the NaNs
+
+#making y~x return table
+#check out number of valid ys
+etf_return[,-1][, lapply(.SD, function(j) length(j[-which(is.na(j))]))]
+
 
