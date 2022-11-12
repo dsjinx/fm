@@ -5,7 +5,7 @@ library(caret)
 library(rvest)
 library(readxl)
 library(doParallel)
-
+options(digits = 3)
 registerDoParallel(cores = 3)
 
 #eastmoney funds nav
@@ -302,3 +302,16 @@ usd_return <- usd_return[, .(Date, Close)][
 usd_return[, lapply(.SD, function(j) sum(is.na(j)))]
 usd_return[, lapply(.SD, function(j) sum(is.nan(j)))]
 #excessive number of NAs but no NaN
+
+#prepare the training table
+#log(N) - log(N-k) = sum(log(n)); n is from N- k to N
+#so just subset all the predictors by etf, and log() the daily close
+data_tbl <- usdx[, c(1, 5)][gold[, c(1, 5)][vix[, c(1, 5)][oil[, c(1, 5)][
+  etf[, c(1, 5)], on = "Date"], on = "Date"], on = "Date"], on = "Date"]
+str(data_tbl) #rename the cols and some cols are in chr form
+names(data_tbl) <- c("Date", "usdx", "gold", "vix", "oil", "etf")
+data_tbl <- data_tbl[, lapply(.SD, function(j) 
+                    if(is.character(j)) as.numeric(j) else j)]
+
+#make a log return table
+
