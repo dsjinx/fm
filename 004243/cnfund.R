@@ -312,6 +312,12 @@ str(data_tbl) #rename the cols and some cols are in chr form
 names(data_tbl) <- c("Date", "usdx", "gold", "vix", "oil", "etf")
 data_tbl <- data_tbl[, lapply(.SD, function(j) 
                     if(is.character(j)) as.numeric(j) else j)]
+data_tbl[, lapply(.SD, function(j) sum(is.na(j))),
+         .SDcols = c("usdx", "gold", "vix", "oil", "etf")]
+#delete all the NA rows, because log returns can include all the intra returns
+NA_ind <- lapply(data_tbl[,-1], function(j) which(is.na(j)))
+NA_ind <- unlist(NA_ind) %>% unique()
+data_tbl <- data_tbl[-NA_ind, ]
 
 #make a log return table
 
