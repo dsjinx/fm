@@ -258,11 +258,10 @@ oil_return <- oil_return[, ":="(r1d = c(NA, diff(log(Close))),
          r90d = c(rep(NA, 90), diff(log(Close), 90)))]
 
 #check for NaNs from original set
-oil_return[, lapply(.SD, function(j) sum(is.nan(j)))]
-nans_ind <- oil_return[, lapply(.SD, function(j) which(is.nan(j)))][,
-                .(r1d, r5d, r10d, r30d, r90d)]
-oil_return[unique(c(nans_ind$r1d, nans_ind$r5d, nans_ind$r10d, nans_ind$r10d,
-       nans_ind$r30d, nans_ind$r90d)),] 
+oil_return[, lapply(.SD, function(j) sum(is.na(j)))]
+oilna_ind <- lapply(oil_return[,-1], function(j) which(is.na(j))) %>% 
+  unlist()
+oil_return[sort(unique(oilna_ind)),] 
 #nan is caused by negative price incident in 2020
 
 #vix return table
@@ -344,5 +343,4 @@ data_tbl[sort(rNAs_ind),] #check the cause of the NaNs
 #making y~x return table
 #check out number of valid ys
 etf_return[,-1][, lapply(.SD, function(j) length(j[-which(is.na(j))]))]
-
-
+#x = oil returns
