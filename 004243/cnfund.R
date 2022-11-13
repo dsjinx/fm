@@ -5,6 +5,8 @@ library(caret)
 library(rvest)
 library(readxl)
 library(doParallel)
+library(glmnet)
+library(xgboost)
 options(digits = 3)
 registerDoParallel(cores = 3)
 
@@ -367,3 +369,12 @@ yx_nas <- lapply(yx_10d, function(j) which(is.na(j))) %>%
 yx_10d <- yx_10d[-yx_nas,]
 
 #model training
+part_ind <- createDataPartition(1:dim(yx_10d)[1], times = 1, 
+                                p = 0.2, list = FALSE)
+train_10d <- yx_10d[-part_ind,]
+test_10d <- yx_10d[part_ind]
+
+#use 'glmnet' to implement ridge regression
+
+
+#use +/- to classify the gain/loss 
