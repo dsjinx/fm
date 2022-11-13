@@ -368,13 +368,29 @@ yx_nas <- lapply(yx_10d, function(j) which(is.na(j))) %>%
   unlist() %>% unique() 
 yx_10d <- yx_10d[-yx_nas,]
 
+#correlation visualisation
+cormatrix <- cor(yx_10d[,-1]) #result is a matrix 
+cormatrix[upper.tri(cormatrix)] <- NA #just save half of the cormatrix
+#since the matrix is symmetric
+melt_corm <- reshape2::melt(cormatrix, na.rm = TRUE)
+ggplot(data = melt_corm, aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab") +
+  theme_minimal()+ 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 12, hjust = 1))+
+  coord_fixed()
+
 #model training
 part_ind <- createDataPartition(1:dim(yx_10d)[1], times = 1, 
                                 p = 0.2, list = FALSE)
 train_10d <- yx_10d[-part_ind,]
 test_10d <- yx_10d[part_ind]
 
-#use 'glmnet' to implement ridge regression
+#use 'glmnet' 
+#use ridge only regulation 1st
+
 
 
 #use +/- to classify the gain/loss 
