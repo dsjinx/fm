@@ -343,4 +343,27 @@ data_tbl[sort(rNAs_ind),] #check the cause of the NaNs
 #making y~x return table
 #check out number of valid ys
 etf_return[,-1][, lapply(.SD, function(j) length(j[-which(is.na(j))]))]
-#x = oil returns
+#exclude the 1st N*NA of each periodic returns caused by respective 
+#cols calculation, and leave the inner ones to be subset in 
+#an ad hoc manner
+#y = 10d return
+yx_10d <- data.table(
+  date = etf_return$Date,
+  y10d = c(etf_return$r10d[-c(1:10)], rep(NA, 10))
+) #create look ahead effect by moving 10d return to day-10
+
+#add predictors
+yx_10d <- oil_return[, -2][yx_10d, on = .(Date = date)]
+yx_10d <- usd_return[, -2][gold_return[, -2][vix_return[, -2][
+  yx_10d, on = "Date"], on = "Date"], on = "Date"]
+names(yx_10d) <- c("date", "usd1d", "usd5d", "usd10d", "usd30d", "usd90d",
+                   "gold1d", "gold5d", "gold10d", "gold30d", "gold90d",
+                   "vix1d", "vix5d", "vix10d", "vix30d", "vix90d", 
+                   "oil1d", "oil5d", "oil10d", "oil30d", "oil90d", "y10d")
+
+#remove the NAs
+yx_nas <- lapply(yx_10d, function(j) which(is.na(j))) %>% 
+  unlist() %>% unique() 
+yx_10d <- yx_10d[-yx_nas,]
+
+#model training
