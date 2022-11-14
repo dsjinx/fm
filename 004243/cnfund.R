@@ -399,7 +399,14 @@ test_10d <- yx_10d[part_ind]
 #use 'glmnet' 
 #use ridge only regulation 1st
 matrix_x <- as.matrix(train_10d[, -c(1, 22)])
-glmnet_cvfit_ridge <- cv.glmnet(x = matrix_x, y = yx_10d$y10d, nfold = 5, 
+glmnet_cvfit_ridge <- cv.glmnet(x = matrix_x, y = train_10d$y10d, nfold = 5, 
                                 alpha = 0, parallel = TRUE)
-
+print(glmnet_cvfit_ridge)
+pred_glmnet_ridge <- predict(glmnet_cvfit_ridge, 
+                             newx = as.matrix(test_10d[, -c(1, 22)]), 
+                             s = "lambda.min")
+sqrt(mean((pred_glmnet_ridge - test_10d$y10d)^2))
+ggplot(test_10d, aes(x = date)) + 
+         geom_line(aes(y = pred_glmnet_ridge, color = "pred")) +
+         geom_line(aes(y = test_10d$y10d, color = "real"))
 #use +/- to classify the gain/loss 
