@@ -382,6 +382,15 @@ ggplot(data = melt_corm, aes(Var2, Var1, fill = value))+
                                    size = 12, hjust = 1))+
   coord_fixed()
 
+#check the normality of y
+q <- seq(0.05, 0.95, 0.05)
+data_quantile <- quantile(yx_10d$y10d, q)
+theo_quantile <- qnorm(q, mean = mean(yx_10d$y10d), sd = sd(yx_10d$y10d))
+qplot(theo_quantile, data_quantile) + geom_abline() #negative skewed
+ggplot(yx_10d[,c("date","y10d")], aes(yx_10d$y10d)) + geom_density()
+#use box plot to explore the cause of skewness
+ggplot()
+
 #model training
 part_ind <- createDataPartition(1:dim(yx_10d)[1], times = 1, 
                                 p = 0.2, list = FALSE)
