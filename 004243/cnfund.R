@@ -388,8 +388,7 @@ data_quantile <- quantile(yx_10d$y10d, q)
 theo_quantile <- qnorm(q, mean = mean(yx_10d$y10d), sd = sd(yx_10d$y10d))
 qplot(theo_quantile, data_quantile) + geom_abline() #negative skewed
 ggplot(yx_10d[,c("date","y10d")], aes(yx_10d$y10d)) + geom_density()
-#use box plot to explore the cause of skewness
-ggplot()
+boxplot(yx_10d$y10d) #few lower extremes 
 
 #model training
 part_ind <- createDataPartition(1:dim(yx_10d)[1], times = 1, 
@@ -399,7 +398,8 @@ test_10d <- yx_10d[part_ind]
 
 #use 'glmnet' 
 #use ridge only regulation 1st
-
-
+matrix_x <- as.matrix(train_10d[, -c(1, 22)])
+glmnet_cvfit_ridge <- cv.glmnet(x = matrix_x, y = yx_10d$y10d, nfold = 5, 
+                                alpha = 0, parallel = TRUE)
 
 #use +/- to classify the gain/loss 
