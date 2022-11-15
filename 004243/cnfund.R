@@ -391,22 +391,81 @@ ggplot(yx_10d[,c("date","y10d")], aes(yx_10d$y10d)) + geom_density()
 boxplot(yx_10d$y10d) #few lower extremes 
 
 #model training
-part_ind <- createDataPartition(1:dim(yx_10d)[1], times = 1, 
-                                p = 0.2, list = FALSE)
-train_10d <- yx_10d[-part_ind,]
-test_10d <- yx_10d[part_ind]
+#partition data by time sequence
+ts_ind <- seq(1, floor(dim(yx_10d)[1]*0.8), 1)
+train_ts <- yx_10d[ts_ind,]
+test_ts <- yx_10d[-ts_ind,]
 
 #use 'glmnet' 
-#use ridge only regulation 1st
-matrix_x <- as.matrix(train_10d[, -c(1, 22)])
-glmnet_cvfit_ridge <- cv.glmnet(x = matrix_x, y = train_10d$y10d, nfold = 5, 
+#use ridge only regulation alpha = 0
+matrix_x <- as.matrix(train_ts[, -c(1, 22)])
+glmnet_cvfit_ridge <- cv.glmnet(x = matrix_x, y = train_ts$y10d, nfold = 5, 
                                 alpha = 0, parallel = TRUE)
 print(glmnet_cvfit_ridge)
+plot(glmnet_cvfit_ridge)
 pred_glmnet_ridge <- predict(glmnet_cvfit_ridge, 
-                             newx = as.matrix(test_10d[, -c(1, 22)]), 
+                             newx = as.matrix(test_ts[, -c(1, 22)]), 
                              s = "lambda.min")
-sqrt(mean((pred_glmnet_ridge - test_10d$y10d)^2))
-ggplot(test_10d, aes(x = date)) + 
+sqrt(mean((pred_glmnet_ridge - test_ts$y10d)^2))
+cor(pred_glmnet_ridge, test_ts$y10d)
+ggplot(test_ts, aes(x = date)) + 
          geom_line(aes(y = pred_glmnet_ridge, color = "pred")) +
-         geom_line(aes(y = test_10d$y10d, color = "real"))
+         geom_line(aes(y = test_ts$y10d, color = "real"))
+
+#elastic net alpha = 0.5
+cvfit_elastic <- cv.glmnet(x = matrix_x, y = train_ts$y10d, nfold = 5, 
+                                alpha = 0.5, parallel = TRUE)
+print(cvfit_elastic)
+plot(cvfit_elastic)
+pred_elastic <- predict(cvfit_elastic, 
+                        newx = as.matrix(test_ts[, -c(1, 22)]),
+                        s = "lambda.min")
+sqrt(mean((pred_elastic - test_ts$y10d)^2))
+cor(pred_elastic, test_ts$y10d)
+ggplot(test_ts, aes(x = date)) + 
+  geom_line(aes(y = pred_elastic, color = "pred")) +
+  geom_line(aes(y = test_ts$y10d, color = "real"))
+
+#elastic with turned alpha
+alpha_turn <- seq(0, 1, 0.1) 
+fid <- sample(1:5, dim(train_ts)[1], replace = TRUE) 
+cvglmnet_turn <- foreach(a = alpha_turn, .combine = "c") %do% {
+  cvfit_temp <- cv.glmnet(x = matrix_x, y = train_ts$y10d, foldid = fid, 
+                          alpha = a, parallel = TRUE)
+  min(cvfit_temp$cvm)
+}
+qplot(alpha_turn, cvglmnet_turn, geom = c("point", "line"))
+best_alpha <- alpha_turn[which.min(cvglmnet_turn)] #its just ridge
+netfit_alpha <- cv.glmnet(x = matrix_x, y = train_ts$y10d, nfolds = 5, 
+                          alpha = best_alpha, parallel = TRUE)
+print(netfit_alpha)
+plot(netfit_alpha)
+pred_alpha <- predict(netfit_alpha, 
+                      newx = as.matrix(test_ts[, -c(1, 22)]),
+                      s = "lambda.min")
+sqrt(mean((pred_alpha - test_ts$y10d)^2))
+cor(pred_alpha, test_ts$y10d)
+ggplot(test_ts, aes(x = date)) + 
+  geom_line(aes(y = pred_alpha, color = "pred")) +
+  geom_line(aes(y = test_ts$y10d, color = "real"))
+
+#backtesting
+glmnet_bt <- test_ts[, c(1, 22)][, ":="(elanet = pred_elastic,
+                                        ridge = pred_glmnet_ridge)]
+#trading signals +1 for long, - 1 for short
+glmnet_bt <- glmnet_bt[, ":="(elanet_sig = ifelse(elanet > 0, 1, -1),
+                               ridge_sig = ifelse(ridge > 0, 1, -1),
+                              test_sig = ifelse(y10d > 0 ,1, -1))] 
+
+confusionMatrix(as.factor(glmnet_bt$elanet_sig), 
+                as.factor(glmnet_bt$test_sig))
+confusionMatrix(as.factor(glmnet_bt$ridge_sig), 
+                as.factor(glmnet_bt$test_sig))
+#direction prediction is poor
+#backtest the money value performance
+elanet_bt <- c()
+for(i in 1:dim(test_ts)[1]){
+  
+}
+
 #use +/- to classify the gain/loss 
