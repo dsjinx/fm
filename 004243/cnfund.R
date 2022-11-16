@@ -492,8 +492,8 @@ for(i in 2:dim(test_ts)[1]){
                         ifelse(
                             as.numeric(glmnet_bt$date[i] - glmnet_bt$date[i-1]) >= 2, 
                               ifelse(
-                                elanet_pos[i] != 0, 
-                                elanet_pos[i] * etf_return[which(etf_return$Date == glmnet_bt$date[i]), Close], 
+                                elanet_pos[i-1] != 0, 
+                                elanet_pos[i-1] * etf_return[which(etf_return$Date == glmnet_bt$date[i]), Close], 
                                 elanet_nav[i-1]),
                             elanet_nav[i-1])
   )
