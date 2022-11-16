@@ -461,11 +461,51 @@ confusionMatrix(as.factor(glmnet_bt$elanet_sig),
                 as.factor(glmnet_bt$test_sig))
 confusionMatrix(as.factor(glmnet_bt$ridge_sig), 
                 as.factor(glmnet_bt$test_sig))
-#direction prediction is poor
-#backtest the money value performance
-elanet_bt <- c()
-for(i in 1:dim(test_ts)[1]){
-  
-}
+#direction prediction is very poor
 
+#backtest by money value 
+#holding tracker
+elanet_pos <- c(10000 / etf_return[
+  which(etf_return$Date == glmnet_bt$date[1]), Close])
+#NAV tracker
+elanet_nav <- c(10000)
+#fill the buy/sell price into the above collector according to the +/- signal
+for(i in 2:dim(test_ts)[1]){
+  #update position
+  elanet_pos[i] <- ifelse(
+                      glmnet_bt$elanet_sig[i] * glmnet_bt$elanet_sig[i-1] == 1, 
+                      elanet_pos[i-1], 
+                        ifelse(
+                          as.numeric(glmnet_bt$date[i] - glmnet_bt$date[i-1]) >= 2,
+                            ifelse(glmnet_bt$elanet_sig[i] == 1, 
+                                   elanet_nav[i-1] / etf_return[
+                                     which(etf_return$Date == glmnet_bt$date[i]), Close], 
+                                   0),
+                          elanet_pos[i-1]
+                        )
+  )
+  
+  #update NAV
+  elanet_nav[i] <- ifelse(
+                      glmnet_bt$elanet_sig[i] * glmnet_bt$elanet_sig[i-1] == 1, 
+                      elanet_nav[i-1], 
+                        ifelse(
+                            as.numeric(glmnet_bt$date[i] - glmnet_bt$date[i-1]) >= 2, 
+                              ifelse(
+                                elanet_pos[i] != 0, 
+                                elanet_pos[i] * etf_return[which(etf_return$Date == glmnet_bt$date[i]), Close], 
+                                elanet_nav[i-1]),
+                            elanet_nav[i-1])
+  )
+}
+rm(i)
+
+qplot(test_ts$date, elanet_pos, geom = c("point", "line"))
+qplot(test_ts$date, elanet_nav, geom = c("point", "line"))
+
+#NAV vector start with principal of $10000
+elanet_nav <- c(10000)
+for(i in 1:length(elanet_bt)){
+  #only act on the price when 
+}
 #use +/- to classify the gain/loss 
