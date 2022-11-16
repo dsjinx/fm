@@ -503,6 +503,12 @@ rm(i)
 qplot(test_ts$date, elanet_pos, geom = c("point", "line"))
 qplot(test_ts$date, elanet_nav, geom = c("point", "line"))
 
+performance_tbl <- data.table(
+  etf = log(etf_return$Close[which(etf_return$Date == test_ts$date[232])]) - 
+    log(etf_return$Close[which(etf_return$Date == test_ts$date[1])]), 
+  elanet = log(elanet_nav[232]) - log(elanet_nav[1])
+)
+
 #NAV vector start with principal of $10000
 elanet_nav <- c(10000)
 for(i in 1:length(elanet_bt)){
