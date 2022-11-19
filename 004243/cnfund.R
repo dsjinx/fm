@@ -1,12 +1,16 @@
 library(tidyverse)
 library(lubridate)
 library(data.table)
+library(zoo)
+library(xts)
+library(quantmod)
 library(caret)
 library(rvest)
 library(readxl)
 library(doParallel)
 library(glmnet)
 library(xgboost)
+
 options(digits = 3)
 registerDoParallel(cores = 3)
 
@@ -509,9 +513,6 @@ performance_tbl <- data.table(
   elanet = log(elanet_nav[232]) - log(elanet_nav[1])
 )
 
-#NAV vector start with principal of $10000
-elanet_nav <- c(10000)
-for(i in 1:length(elanet_bt)){
-  #only act on the price when 
-}
+#include the backtest of the ridge
+
 #use +/- to classify the gain/loss 
