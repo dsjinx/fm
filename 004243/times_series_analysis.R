@@ -34,27 +34,22 @@ cor(diff(log(etf_oil_wkly$etf_ts.Close))[-1],
 #low correlation between return
 
 #check integration order of each wkly ts
-#BIC method to define the p
-BIC <- function(model) {
-  
-  ssr <- sum(model$residuals^2)
-  t <- length(model$residuals)
-  npar <- length(model$coef)
-  
-  return(
-    round(c("p" = npar - 1,
-            "BIC" = log(ssr/t) + npar * log(t)/t,
-            "R2" = summary(model)$r.squared), 4)
-  )
-}
+etf_df <- summary(ur.df(etf_oil_wkly$etf_ts.Close, 
+             type = "trend", 
+             lags = 20, 
+             selectlags = "AIC"))
+etf_df #strong I(1) evidence with drift + trend @10%
 
-#search the best p order min BIC
-order <- 1:20
+oil_df <- summary(ur.df(etf_oil_wkly$oil_ts.Close,
+                        type = "trend",
+                        lags = 20, 
+                        selectlags = "AIC"))
+oil_df #strong I(1) with drift + trend @10% 
 
-BICs <- sapply(order, function(x) 
-  BIC(dynlm(zoo(etf_oil_wkly$etf_ts.Close) ~ 
-              L(zoo(etf_oil_wkly$etf_ts.Close), 1:x))))
-BICs
-qplot(order, BICs[2,], geom = c("point", "line"))
-p_order <- order[which.min(BICs[2, ])] 
+etfoil_spread <- summary(ur.df(etf_oil_wkly$etf_ts.Close - 
+                                 etf_oil_wkly$oil_ts.Close,
+                               type = "trend",
+                               lags = 20, 
+                               selectlags = "AIC"))
+etfoil_spread #showing I(1) across all three types 
 
