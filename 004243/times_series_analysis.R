@@ -36,20 +36,25 @@ cor(diff(log(etf_oil_wkly$etf_ts.Close))[-1],
 #check integration order of each wkly ts
 etf_df <- summary(ur.df(etf_oil_wkly$etf_ts.Close, 
              type = "trend", 
-             lags = 20, 
+             lags = 26, 
              selectlags = "AIC"))
 etf_df #strong I(1) evidence with drift + trend @10%
 
 oil_df <- summary(ur.df(etf_oil_wkly$oil_ts.Close,
                         type = "trend",
-                        lags = 20, 
+                        lags = 26, 
                         selectlags = "AIC"))
-oil_df #strong I(1) with drift + trend @10% 
+oil_df #strong I(1) with drift + trend @10%, but for RW, and drift only @5%
 
-etfoil_spread <- summary(ur.df(etf_oil_wkly$etf_ts.Close - 
-                                 etf_oil_wkly$oil_ts.Close,
-                               type = "trend",
-                               lags = 20, 
-                               selectlags = "AIC"))
-etfoil_spread #showing I(1) across all three types 
+#estimate cointegration vector
+etfoil_coint <- dynlm(zoo(etf_oil_wkly$etf_ts.Close) ~ 
+                        zoo(etf_oil_wkly$oil_ts.Close))
+summary(etfoil_coint)
+
+#check stationary of coint model residual
+etfoil_z_df <- ur.df(resid(etfoil_coint), 
+                     type = "none",
+                     lags = 26,
+                     selectlags = "AIC")
+summary(etfoil_z_df) #strong I(1), so the cointegration is rejected
 
