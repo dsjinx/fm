@@ -165,6 +165,23 @@ summary(baozs_z) #!!!!!!good coint relation @1%
 plot.zoo(resid(baozs_coint))
 boxplot(coredata(resid(baozs_coint)))
 plot(density(coredata(resid(baozs_coint))))
+summary(coredata(resid(baozs_coint)))
 
+baozs_zresid <- as.xts(resid(baozs_coint))["2022"] 
+sum(abs(baozs_zresid) >= 0.1)/length(baozs_zresid)
+
+baozs_zmed <- summary(coredata(resid(baozs_coint)))["Median"]
 baozs_pos <- c()
-
+for(i in 1:length(baozs_zresid)){
+  baozs_pos <- c(baozs_pos, ifelse(
+    baozs_zresid[i] >  baozs_zmed, -1, ifelse(
+      baozs_zresid[i] < baozs_zmed, 1, 0)
+    )
+  )
+}
+baozs_pnl <- c()
+for(i in 1:length(baozs_zresid)){
+  baozs_pnl <- c(baozs_pnl, ifelse(
+    
+  ))
+}
