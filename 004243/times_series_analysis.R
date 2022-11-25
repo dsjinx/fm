@@ -85,10 +85,10 @@ plot.zoo(wanzs_dly, plot.type = "single", col = c("blue", "red"),
          lty = 1:2)
 plot.zoo(merge.xts(baoli, jindi), plot.type = "single", col = c("blue", "red"),
          lty = 1:2)
-plot.zoo(merge.xts(baoli["2020-10/"], zssk), plot.type = "single", col = c("blue", "red"),
-         lty = 1:2)
-plot.zoo(merge.xts(jindi["2020-10/"], zssk), plot.type = "single", col = c("blue", "red"),
-         lty = 1:2)
+plot.zoo(merge.xts(baoli["2020-10/"], zssk), plot.type = "single", 
+         col = c("blue", "red"), lty = 1:2)
+plot.zoo(merge.xts(jindi["2020-10/"], zssk), plot.type = "single", 
+         col = c("blue", "red"), lty = 1:2)
 ######df######
 wankeur <- summary(ur.df(wanbao_dly$wanke, 
                          type = "trend",
@@ -161,17 +161,18 @@ baozs_z <- ur.df(resid(baozs_coint),
 summary(baozs_z) #!!!!!!good coint relation @1% 
 
 ######backtest######
-#baozs
+#baoli/zssk
 plot.zoo(resid(baozs_coint))
 boxplot(coredata(resid(baozs_coint)))
 plot(density(coredata(resid(baozs_coint))))
 summary(coredata(resid(baozs_coint)))
 
+#test 2022 YtoD performance
 baozs_zresid <- as.xts(resid(baozs_coint))["2022"] 
 sum(abs(baozs_zresid) >= 0.1)/length(baozs_zresid)
 
 baozs_zmed <- summary(coredata(resid(baozs_coint)))["Median"]
-baozs_pos <- c()
+baozs_pos <- c() #position
 for(i in 1:length(baozs_zresid)){
   baozs_pos <- c(baozs_pos, ifelse(
     baozs_zresid[i] >  baozs_zmed, -1, ifelse(
@@ -179,9 +180,49 @@ for(i in 1:length(baozs_zresid)){
     )
   )
 }
-baozs_pnl <- c()
-for(i in 1:length(baozs_zresid)){
-  baozs_pnl <- c(baozs_pnl, ifelse(
-    
+
+baozs_posval <- data.frame(cash = c(1000),
+                           stock = c(0)) #gross of fee account value
+baozs_date <- index(baozs_zresid)
+for(i in 2:length(baozs_zresid)){
+  baozs_posval <- rbind(baozs_posval, ifelse(
+    baozs_pos[i-1]*baozs_pos[i] == 1, baozs_posval[i-1,], ifelse(
+      baozs_pos[i-1]*baozs_pos[i] == -1, ifelse(
+        baozs_pos[i] == 1 & baozs_posval$stock[i-1] != 0, 
+        c(baozs_posval$cash[i-1] + 
+          baozs_posval$stock[i-1] * zssk[baozs_date[i]], 0), ifelse(
+        baozs_pos[i] == 1 & baozs_posval$stock[i-1] == 0, 
+        c(baozs_posval$cash[i-1] - 
+            floor(baozs_posval$cash[i-1] / baoli[baozs_date[i]]) * 
+            baoli[baozs_date[i]], 
+          floor(baozs_posval$cash[i-1] / baoli[baozs_date[i]])), ifelse(
+            baozs_pos[i] == -1 & baozs_posval$stock[i-1] != 0, 
+            c(baozs_posval$cash[i-1] + 
+                baozs_posval$stock[i-1] * baoli[baozs_date[i]], 0), ifelse(
+                  baozs_pos[i] == -1 & baozs_posval$stock[i-1] == 0,
+                  c(baozs_posval$cash[i-1] - 
+                      floor(baozs_posval$cash[i-1] / zssk[baozs_date[i]]) * 
+                      zssk[baozs_date[i]], 
+                    floor(baozs_posval$cash[i-1] / zssk[baozs_date[i]])), 
+                  c(NA, NA)
+                  )
+                )
+          )
+      ), ifelse(
+        baozs_pos[i-1]*baozs_pos[i] == 0, ifelse(
+          baozs_pos[i-1] == 1 & baozs_posval$stock[i-1] != 0,
+          c(baozs_posval$cash[i-1] + 
+              baozs_posval$stock[i-1] * baoli[baozs_date[i]], 0), ifelse(
+                baozs_pos[i-1] == 1 & baozs_posval$stock[i-1] == 0,
+                baozs_posval[i-1,], ifelse(
+                  baozs_pos[i-1] == -1 & baozs_posval$stock[i-1] != 0,
+                  c(baozs_posval$cash[i-1] + 
+                      baozs_posval$stock[i-1] * zssk[baozs_date[i]], 0),
+                  baozs_posval[i-1,]
+                )
+              )
+        ), c(NA, NA)
+      )
+      )
   ))
 }
