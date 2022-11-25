@@ -181,29 +181,29 @@ for(i in 1:length(baozs_zresid)){
   )
 }
 
-baozs_posval <- data.frame(cash = c(1000),
-                           stock = c(0)) #gross of fee account value
+baozs_posval <- 1000 #gross of fee account value
 baozs_date <- index(baozs_zresid)
+#the loop uses the t+0 price for position switching
 for(i in 2:length(baozs_zresid)){
-  baozs_posval <- rbind(baozs_posval, ifelse(
+  baozs_posval <- c(baozs_posval, ifelse(
     baozs_pos[i-1]*baozs_pos[i] == 1, baozs_posval[i-1,], ifelse(
       baozs_pos[i-1]*baozs_pos[i] == -1, ifelse(
         baozs_pos[i] == 1 & baozs_posval$stock[i-1] != 0, 
         c(baozs_posval$cash[i-1] + 
-          baozs_posval$stock[i-1] * zssk[baozs_date[i]], 0), ifelse(
+          baozs_posval$stock[i-1] * exp(zssk[baozs_date[i]]), 0), ifelse(
         baozs_pos[i] == 1 & baozs_posval$stock[i-1] == 0, 
         c(baozs_posval$cash[i-1] - 
-            floor(baozs_posval$cash[i-1] / baoli[baozs_date[i]]) * 
-            baoli[baozs_date[i]], 
-          floor(baozs_posval$cash[i-1] / baoli[baozs_date[i]])), ifelse(
+            floor(baozs_posval$cash[i-1] / exp(baoli[baozs_date[i]])) * 
+            exp(baoli[baozs_date[i]]), 
+          floor(baozs_posval$cash[i-1] / exp(baoli[baozs_date[i]]))), ifelse(
             baozs_pos[i] == -1 & baozs_posval$stock[i-1] != 0, 
             c(baozs_posval$cash[i-1] + 
-                baozs_posval$stock[i-1] * baoli[baozs_date[i]], 0), ifelse(
+                baozs_posval$stock[i-1] * exp(baoli[baozs_date[i]]), 0), ifelse(
                   baozs_pos[i] == -1 & baozs_posval$stock[i-1] == 0,
                   c(baozs_posval$cash[i-1] - 
-                      floor(baozs_posval$cash[i-1] / zssk[baozs_date[i]]) * 
-                      zssk[baozs_date[i]], 
-                    floor(baozs_posval$cash[i-1] / zssk[baozs_date[i]])), 
+                      floor(baozs_posval$cash[i-1] / exp(zssk[baozs_date[i]])) * 
+                      exp(zssk[baozs_date[i]]), 
+                    floor(baozs_posval$cash[i-1] / exp(zssk[baozs_date[i]]))), 
                   c(NA, NA)
                   )
                 )
@@ -212,12 +212,12 @@ for(i in 2:length(baozs_zresid)){
         baozs_pos[i-1]*baozs_pos[i] == 0, ifelse(
           baozs_pos[i-1] == 1 & baozs_posval$stock[i-1] != 0,
           c(baozs_posval$cash[i-1] + 
-              baozs_posval$stock[i-1] * baoli[baozs_date[i]], 0), ifelse(
+              baozs_posval$stock[i-1] * exp(baoli[baozs_date[i]]), 0), ifelse(
                 baozs_pos[i-1] == 1 & baozs_posval$stock[i-1] == 0,
                 baozs_posval[i-1,], ifelse(
                   baozs_pos[i-1] == -1 & baozs_posval$stock[i-1] != 0,
                   c(baozs_posval$cash[i-1] + 
-                      baozs_posval$stock[i-1] * zssk[baozs_date[i]], 0),
+                      baozs_posval$stock[i-1] * exp(zssk[baozs_date[i]]), 0),
                   baozs_posval[i-1,]
                 )
               )
