@@ -1,7 +1,7 @@
 library(tidyverse)
 library(data.table)
 library(lubridate)
-library(xts) 
+library(xts)
 library(dynlm)
 library(vars)
 library(caret)
@@ -161,4 +161,10 @@ baozs_z <- ur.df(resid(baozs_coint),
 summary(baozs_z) #!!!!!!good coint relation @1% 
 
 ######backtest######
+#baozs
 plot.zoo(resid(baozs_coint))
+boxplot(coredata(resid(baozs_coint)))
+plot(density(coredata(resid(baozs_coint))))
+
+baozs_pos <- c()
+
