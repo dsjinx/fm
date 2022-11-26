@@ -161,6 +161,15 @@ baozs_z <- ur.df(resid(baozs_coint),
                   selectlags = "AIC")
 summary(baozs_z) #!!!!!!good coint relation @1% 
 
+rollapply() #past n days rolling z to forecast/to compare with population z
+sum(index(baoli["2020-10/"]) != index(zssk))
+baozs_coint12mt <- dynlm(zoo(baoli["2020-10/"]) ~ zoo(zssk))
+summary(baozs_coint)
+baozs_z <- ur.df(resid(baozs_coint),
+                 type = "none",
+                 lags = 120,
+                 selectlags = "AIC")
+summary(baozs_z)
 ######backtest######
 ####baoli/zssk####
 plot.zoo(resid(baozs_coint))
@@ -222,3 +231,5 @@ plot.zoo(merge.xts(xts(baozs_nav, baozs_date),
 coredata(baoli[baozs_date[216]]) - coredata(baoli[baozs_date[1]])
 coredata(zssk[baozs_date[216]]) - coredata(zssk[baozs_date[1]])               
 log(baozs_nav[216]/baozs_nav[1])
+
+function(){}
