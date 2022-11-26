@@ -77,6 +77,7 @@ wanbao_dly <- merge.xts(wanke, baoli)
 wanjin_dly <- merge.xts(wanke, jindi)
 wanzs_dly <- merge.xts(wanke["2020-10/"], zssk["2020-10/"])
 
+######plots######
 plot.zoo(wanbao_dly, plot.type = "single", col = c("blue", "red"),
          lty = 1:2)
 plot.zoo(wanjin_dly, plot.type = "single", col = c("blue", "red"),
@@ -161,7 +162,7 @@ baozs_z <- ur.df(resid(baozs_coint),
 summary(baozs_z) #!!!!!!good coint relation @1% 
 
 ######backtest######
-#baoli/zssk
+####baoli/zssk####
 plot.zoo(resid(baozs_coint))
 boxplot(coredata(resid(baozs_coint)))
 plot(density(coredata(resid(baozs_coint))))
@@ -172,57 +173,52 @@ baozs_zresid <- as.xts(resid(baozs_coint))["2022"]
 sum(abs(baozs_zresid) >= 0.1)/length(baozs_zresid)
 
 baozs_zmed <- summary(coredata(resid(baozs_coint)))["Median"]
-baozs_pos <- c() #position
+baozs_signal <- c() #trading signal based on z-median
 for(i in 1:length(baozs_zresid)){
-  baozs_pos <- c(baozs_pos, ifelse(
+  baozs_signal <- c(baozs_signal, ifelse(
     baozs_zresid[i] >  baozs_zmed, -1, ifelse(
       baozs_zresid[i] < baozs_zmed, 1, 0)
     )
   )
 }
 
-baozs_posval <- 1000 #gross of fee account value
+#gross of fee account holding based on 10k
 baozs_date <- index(baozs_zresid)
+baozs_pos <- as.numeric(10000/exp(zssk[baozs_date[1]])) 
 #the loop uses the t+0 price for position switching
 for(i in 2:length(baozs_zresid)){
-  baozs_posval <- c(baozs_posval, ifelse(
-    baozs_pos[i-1]*baozs_pos[i] == 1, baozs_posval[i-1,], ifelse(
-      baozs_pos[i-1]*baozs_pos[i] == -1, ifelse(
-        baozs_pos[i] == 1 & baozs_posval$stock[i-1] != 0, 
-        c(baozs_posval$cash[i-1] + 
-          baozs_posval$stock[i-1] * exp(zssk[baozs_date[i]]), 0), ifelse(
-        baozs_pos[i] == 1 & baozs_posval$stock[i-1] == 0, 
-        c(baozs_posval$cash[i-1] - 
-            floor(baozs_posval$cash[i-1] / exp(baoli[baozs_date[i]])) * 
-            exp(baoli[baozs_date[i]]), 
-          floor(baozs_posval$cash[i-1] / exp(baoli[baozs_date[i]]))), ifelse(
-            baozs_pos[i] == -1 & baozs_posval$stock[i-1] != 0, 
-            c(baozs_posval$cash[i-1] + 
-                baozs_posval$stock[i-1] * exp(baoli[baozs_date[i]]), 0), ifelse(
-                  baozs_pos[i] == -1 & baozs_posval$stock[i-1] == 0,
-                  c(baozs_posval$cash[i-1] - 
-                      floor(baozs_posval$cash[i-1] / exp(zssk[baozs_date[i]])) * 
-                      exp(zssk[baozs_date[i]]), 
-                    floor(baozs_posval$cash[i-1] / exp(zssk[baozs_date[i]]))), 
-                  c(NA, NA)
-                  )
-                )
-          )
-      ), ifelse(
-        baozs_pos[i-1]*baozs_pos[i] == 0, ifelse(
-          baozs_pos[i-1] == 1 & baozs_posval$stock[i-1] != 0,
-          c(baozs_posval$cash[i-1] + 
-              baozs_posval$stock[i-1] * exp(baoli[baozs_date[i]]), 0), ifelse(
-                baozs_pos[i-1] == 1 & baozs_posval$stock[i-1] == 0,
-                baozs_posval[i-1,], ifelse(
-                  baozs_pos[i-1] == -1 & baozs_posval$stock[i-1] != 0,
-                  c(baozs_posval$cash[i-1] + 
-                      baozs_posval$stock[i-1] * exp(zssk[baozs_date[i]]), 0),
-                  baozs_posval[i-1,]
-                )
-              )
-        ), c(NA, NA)
-      )
-      )
-  ))
+  baozs_pos <- c(baozs_pos, ifelse(baozs_signal[i-1]*baozs_signal[i] == 1, 
+                                      baozs_pos[i-1], 
+    ifelse(baozs_signal[i-1]*baozs_signal[i] == -1, 
+      ifelse(baozs_signal[i] == 1, 
+        baozs_pos[i-1] * exp(zssk[baozs_date[i]]) / exp(baoli[baozs_date[i]]), 
+        ifelse(baozs_signal[i] == -1, 
+        baozs_pos[i-1] * exp(baoli[baozs_date[i]]) / exp(zssk[baozs_date[i]]), 
+        baozs_pos[i-1])
+      ), baozs_pos[i-1])
+    )
+    )
 }
+
+#gross nav 
+baozs_nav <- as.numeric(exp(zssk[baozs_date[1]]) * baozs_pos[1])
+for(i in 2:length(baozs_zresid)){
+  baozs_nav <- c(baozs_nav, ifelse(baozs_signal[i-1]*baozs_signal[i] == 1, 
+                                   baozs_nav[i-1], 
+    ifelse(baozs_signal[i-1]*baozs_signal[i] == -1, 
+          ifelse(baozs_signal[i] == 1, 
+       baozs_pos[i] * exp(baoli[baozs_date[i]]), 
+       ifelse(baozs_signal[i] == -1, 
+        baozs_pos[i] * exp(zssk[baozs_date[i]]), 
+        baozs_nav[i-1])
+          ), baozs_nav[i-1])
+  )
+  )
+}
+
+plot.zoo(merge.xts(xts(baozs_nav, baozs_date), 
+                   xts(baozs_signal, baozs_date)),
+         col = c("blue", "red"), lty = 1:2)
+coredata(baoli[baozs_date[216]]) - coredata(baoli[baozs_date[1]])
+coredata(zssk[baozs_date[216]]) - coredata(zssk[baozs_date[1]])               
+log(baozs_nav[216]/baozs_nav[1])
