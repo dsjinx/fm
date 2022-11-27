@@ -273,4 +273,86 @@ coredata(baoli[baozs_date[216]]) - coredata(baoli[baozs_date[1]])
 coredata(zssk[baozs_date[216]]) - coredata(zssk[baozs_date[1]])               
 log(baozs_nav[216]/baozs_nav[1])
 
-function(){}
+#12m trailing sd for signal
+baozs_sd12mtsig <- signal_generator(ref = xts(baozs_z12mt_sd)["2022"], 
+                                    residz = baozs_zresid)
+baozs_sd12mtbk <- backtest(10000, signal = baozs_sd12mtsig, x = zssk,
+                           y = baoli, residz = baozs_zresid) #???something goes wrong with principal
+
+qplot(baozs_sd12mtbk$bt_date, baozs_sd12mtbk$bt_nav, geom = c("point", "line"))
+plot.zoo(merge.xts(xts(log(baozs_backtest$bt_nav), baozs_backtest$bt_date),
+                   xts(log(baozs_sd12mtbk$bt_nav), baozs_sd12mtbk$bt_date)), 
+         plot.type = "single", col = c("red", "blue"), 
+         lwd = 2)
+
+baozs_backtest <- backtest(10000, signal = baozs_signal, x = zssk,
+                           y = baoli, residz = baozs_zresid)
+qplot(baozs_backtest$bt_date, baozs_backtest$bt_nav, geom = c("point", "line"))
+plot.zoo(merge.xts(xts(log(baozs_backtest$bt_nav / 1000), 
+                       baozs_backtest$bt_date),
+                   xts(baozs_dly)["2022"]), plot.type = "single", 
+         col = c("red", "blue", "green"), lwd = 2)
+
+#####backtesting functions#####
+signal_generator <- function(ref, residz){
+  #ref is a signal decider from the statistics of residz
+  #ref is a vector having same length of residz
+  signal <- c()
+  for(i in 1:length(residz)){
+    signal <- c(signal, ifelse(
+      residz[i] > ref[i] & ref[i] > 0, -1, ifelse(
+        residz[i] < ref[i] & ref[i] <0, 1, 0)
+      )
+    )
+  }
+  
+  return(signal)
+}
+
+backtest <- function(principal, signal, x, y, residz){
+  #base pair relationship: y ~ x + residz
+  #x, y are log prices
+  #x, y, residz are xts class
+  #gross of fee account holding based on principal dollar
+  bt_date <- index(residz)
+  bt_pos <- ifelse(signal[1] == 1, 
+                   as.numeric(principal / exp(y[bt_date[1]])), 
+              ifelse(signal[1] == -1,
+                   as.numeric(principal / exp(x[bt_date[1]])),
+                   principal))
+  #gross nav 
+  bt_nav <- ifelse(signal[1] == 1, 
+                   as.numeric(exp(y[bt_date[1]]) * bt_pos[1]),
+                   as.numeric(exp(x[bt_date[1]]) * bt_pos[1]))
+  #the loop uses t+0 price for position switching
+  for(i in 2:length(residz)){
+    bt_pos <- c(bt_pos, ifelse(signal[i-1] * signal[i] == 1, bt_pos[i-1], 
+                ifelse(signal[i-1] * signal[i] == -1, 
+                  ifelse(signal[i] == 1, 
+                    bt_pos[i-1] * exp(x[bt_date[i]]) / exp(y[bt_date[i]]), 
+                      ifelse(signal[i] == -1, 
+                        bt_pos[i-1] * exp(y[bt_date[i]]) / exp(x[bt_date[i]]), 
+                        bt_pos[i-1])
+                    ), bt_pos[i-1])
+                )
+              )
+  }
+  
+  for(i in 2:length(residz)){
+    bt_nav <- c(bt_nav, ifelse(signal[i-1]*signal[i] == 1, ifelse(
+      signal[i] == 1, bt_pos[i] * exp(y[bt_date[i]]), ifelse(signal[i] == -1, 
+       bt_pos[i] * exp(x[bt_date[i]]), bt_nav[i-1])),
+                ifelse(signal[i-1] * signal[i] == -1, 
+                  ifelse(signal[i] == 1, bt_pos[i] * exp(y[bt_date[i]]), 
+                    ifelse(signal[i] == -1, bt_pos[i] * exp(x[bt_date[i]]), 
+                      ifelse(signal[i] == 1, bt_pos[i] * exp(y[bt_date[i]]), 
+                        ifelse(signal[i] == -1, bt_pos[i] * exp(x[bt_date[i]]), 
+                               bt_nav[i-1])))
+                    ), bt_nav[i-1])
+                   )
+                  )
+  }
+  
+  return(data.frame(bt_date, bt_pos, bt_nav)) 
+}
+
