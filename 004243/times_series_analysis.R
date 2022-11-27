@@ -76,6 +76,7 @@ sum(index(wanke["2020-10/"]) != index(zssk))
 wanbao_dly <- merge.xts(wanke, baoli)
 wanjin_dly <- merge.xts(wanke, jindi)
 wanzs_dly <- merge.xts(wanke["2020-10/"], zssk["2020-10/"])
+baozs_dly <- merge.(baoli["2020-10/"], zssk)
 
 ######plots######
 plot.zoo(wanbao_dly, plot.type = "single", col = c("blue", "red"),
@@ -90,7 +91,7 @@ plot.zoo(merge.xts(baoli["2020-10/"], zssk), plot.type = "single",
          col = c("blue", "red"), lty = 1:2)
 plot.zoo(merge.xts(jindi["2020-10/"], zssk), plot.type = "single", 
          col = c("blue", "red"), lty = 1:2)
-######df######
+######dft######
 wankeur <- summary(ur.df(wanbao_dly$wanke, 
                          type = "trend",
                          lags = 120,
@@ -152,24 +153,64 @@ baojin_z <- ur.df(resid(baojin_coint),
                   selectlags = "AIC")
 summary(baojin_z) #good lm but z is I(1) 
 
+######baoli/zssk######
 sum(index(baoli["2020-10/"]) != index(zssk))
 baozs_coint <- dynlm(zoo(baoli["2020-10/"]) ~ zoo(zssk))
-summary(baozs_coint)
+summary(baozs_coint) 
 baozs_z <- ur.df(resid(baozs_coint),
                   type = "none",
                   lags = 120,
                   selectlags = "AIC")
 summary(baozs_z) #!!!!!!good coint relation @1% 
 
-rollapply() #past n days rolling z to forecast/to compare with population z
-sum(index(baoli["2020-10/"]) != index(zssk))
-baozs_coint12mt <- dynlm(zoo(baoli["2020-10/"]) ~ zoo(zssk))
-summary(baozs_coint)
-baozs_z <- ur.df(resid(baozs_coint),
-                 type = "none",
-                 lags = 120,
-                 selectlags = "AIC")
-summary(baozs_z)
+#past n days rolling z to forecast/compare with the historical z
+baozs_z12mt_sd <- rollapplyr(baozs_dly, function(ts){
+  sd(resid(dynlm(ts[,1] ~ ts[,2])))}, 
+  by.column = FALSE, width = 240, partial = FALSE)
+
+summary(ur.df(baozs_z12mt_sd,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #no ur at 1%!!!! 
+
+baozs_z12mt_mean <- rollapplyr(baozs_dly, function(ts){
+  mean(resid(dynlm(ts[,1] ~ ts[,2])))}, 
+  by.column = FALSE, width = 240, partial = FALSE)
+
+summary(ur.df(baozs_z12mt_mean,
+      type = "none",
+      lags = 120,
+      selectlags = "AIC")) #no ur @5% 
+
+baozs_z12mt_median <- rollapplyr(baozs_dly, function(ts){
+  median(resid(dynlm(ts[,1] ~ ts[,2])))}, 
+  by.column = FALSE, width = 240, partial = FALSE) 
+
+summary(ur.df(baozs_z12mt_median,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #has ur
+
+baozs_z12mt_max <- rollapplyr(baozs_dly, function(ts){
+  max(resid(dynlm(ts[,1] ~ ts[,2])))}, 
+  by.column = FALSE, width = 240, partial = FALSE) 
+
+summary(ur.df(baozs_z12mt_max,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #no ur @5%
+
+baozs_z12mt_min <- rollapplyr(baozs_dly, function(ts){
+  min(resid(dynlm(ts[,1] ~ ts[,2])))}, 
+  by.column = FALSE, width = 240, partial = FALSE) 
+
+summary(ur.df(baozs_z12mt_min,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #no ur @1%l!!!
+
+plot.zoo(merge.zoo(baozs_z12mt_max, baozs_z12mt_median, baozs_z12mt_mean, 
+                   baozs_z12mt_sd, baozs_z12mt_min))
 ######backtest######
 ####baoli/zssk####
 plot.zoo(resid(baozs_coint))
