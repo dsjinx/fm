@@ -145,12 +145,19 @@ summary(wanjin_z) #strong lm but z is I(1)
 
 sum(index(baoli) != index(jindi))
 baojin_coint <- dynlm(zoo(baoli) ~ zoo(jindi))
-summary(baojin_coint)
-baojin_z <- ur.df(resid(baojin_coint),
+summary(ur.df(resid(baojin_coint),
                   type = "none",
                   lags = 120,
-                  selectlags = "AIC")
-summary(baojin_z) #good lm but z is I(1) 
+                  selectlags = "AIC")) #not reject @10%
+
+sum(index(jindi["2020-10/"]) != index(zssk))
+jinzs_coint <- dynlm(zoo(jindi["2020-10/"]) ~ zoo(zssk))
+summary(jinzs_coint)
+summary(ur.df(resid(jinzs_coint),
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #not reject @5%
+
 
 ######baoli/zssk######
 sum(index(baoli["2020-10/"]) != index(zssk))
@@ -239,6 +246,10 @@ summary(ur.df(baozs_z12mt_min,
 
 plot.zoo(merge.zoo(baozs_z12mt_max, baozs_z12mt_median, baozs_z12mt_mean, 
                    baozs_z12mt_sd, baozs_z12mt_min))
+
+#120days trailing
+
+
 ######backtest######
 ####baoli/zssk####
 plot.zoo(resid(baozs_coint))
