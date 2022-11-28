@@ -4,7 +4,6 @@ library(lubridate)
 library(xts)
 library(dynlm)
 library(vars)
-library(caret)
 
 etf <- read_csv("./004243/data/etf.csv")
 oil <- read_csv("./004243/data/oil.csv")
@@ -163,7 +162,36 @@ baozs_z <- ur.df(resid(baozs_coint),
                   selectlags = "AIC")
 summary(baozs_z) #!!!!!!good coint relation @1% 
 
-#past n days rolling z to forecast/compare with the historical z
+#past 240 days rolling z to forecast/compare with the historical z
+baozs_z12mt_const <- rollapplyr(baozs_dly, function(ts){
+  coefficients(dynlm(ts[,1] ~ ts[,2]))[1]}, 
+  by.column = FALSE, width = 240, partial = FALSE)
+baozs_z12mt_gamma <- rollapplyr(baozs_dly, function(ts){
+  coefficients(dynlm(ts[,1] ~ ts[,2]))[2]}, 
+  by.column = FALSE, width = 240, partial = FALSE)
+
+baozs_z12mt_zresid <- c()
+for(i in 1:length(baozs_z12mt_const)){
+  baozs_z12mt_zresid <- c(baozs_z12mt_zresid, 
+    as.numeric(baozs_dly$`baoli["2020-10/"]`[i]) - (baozs_z12mt_const[i] + 
+      baozs_z12mt_gamma[i] * as.numeric(baozs_dly$zssk[i])))
+}
+summary(ur.df(baozs_z12mt_zresid,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #not reject ur @10%
+qplot(index(baozs_z12mt_const), baozs_z12mt_zresid, geom = c("point", "line"))
+
+summary(ur.df(baozs_z12mt_const,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #not reject @10%
+
+summary(ur.df(baozs_z12mt_gamma,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC")) #reject @5% 
+
 baozs_z12mt_sd <- rollapplyr(baozs_dly, function(ts){
   sd(resid(dynlm(ts[,1] ~ ts[,2])))}, 
   by.column = FALSE, width = 240, partial = FALSE)
@@ -171,7 +199,7 @@ baozs_z12mt_sd <- rollapplyr(baozs_dly, function(ts){
 summary(ur.df(baozs_z12mt_sd,
               type = "none",
               lags = 120,
-              selectlags = "AIC")) #no ur at 1%!!!! 
+              selectlags = "AIC")) #not reject ur @10% 
 
 baozs_z12mt_mean <- rollapplyr(baozs_dly, function(ts){
   mean(resid(dynlm(ts[,1] ~ ts[,2])))}, 
@@ -180,7 +208,7 @@ baozs_z12mt_mean <- rollapplyr(baozs_dly, function(ts){
 summary(ur.df(baozs_z12mt_mean,
       type = "none",
       lags = 120,
-      selectlags = "AIC")) #no ur @5% 
+      selectlags = "AIC")) #reject ur @5% 
 
 baozs_z12mt_median <- rollapplyr(baozs_dly, function(ts){
   median(resid(dynlm(ts[,1] ~ ts[,2])))}, 
@@ -189,7 +217,7 @@ baozs_z12mt_median <- rollapplyr(baozs_dly, function(ts){
 summary(ur.df(baozs_z12mt_median,
               type = "none",
               lags = 120,
-              selectlags = "AIC")) #has ur
+              selectlags = "AIC")) #reject ur @10%
 
 baozs_z12mt_max <- rollapplyr(baozs_dly, function(ts){
   max(resid(dynlm(ts[,1] ~ ts[,2])))}, 
@@ -198,7 +226,7 @@ baozs_z12mt_max <- rollapplyr(baozs_dly, function(ts){
 summary(ur.df(baozs_z12mt_max,
               type = "none",
               lags = 120,
-              selectlags = "AIC")) #no ur @5%
+              selectlags = "AIC")) #reject ur @5%
 
 baozs_z12mt_min <- rollapplyr(baozs_dly, function(ts){
   min(resid(dynlm(ts[,1] ~ ts[,2])))}, 
@@ -207,7 +235,7 @@ baozs_z12mt_min <- rollapplyr(baozs_dly, function(ts){
 summary(ur.df(baozs_z12mt_min,
               type = "none",
               lags = 120,
-              selectlags = "AIC")) #no ur @1%l!!!
+              selectlags = "AIC")) #not rejct ur @10%
 
 plot.zoo(merge.zoo(baozs_z12mt_max, baozs_z12mt_median, baozs_z12mt_mean, 
                    baozs_z12mt_sd, baozs_z12mt_min))
@@ -273,11 +301,13 @@ coredata(baoli[baozs_date[216]]) - coredata(baoli[baozs_date[1]])
 coredata(zssk[baozs_date[216]]) - coredata(zssk[baozs_date[1]])               
 log(baozs_nav[216]/baozs_nav[1])
 
+#showcase of backtesting functions, but the baozs 12month trailing pair model 
+#is not working
 #12m trailing sd for signal
 baozs_sd12mtsig <- signal_generator(ref = xts(baozs_z12mt_sd)["2022"], 
-                                    residz = baozs_zresid)
-baozs_sd12mtbk <- backtest(10000, signal = baozs_sd12mtsig, x = zssk,
-                           y = baoli, residz = baozs_zresid) #???something goes wrong with principal
+       residz = xts(baozs_z12mt_zresid, index(baozs_z12mt_sd))["2022"])
+baozs_sd12mtbk <- backtest(10000, signal = baozs_sd12mtsig, x = zssk, y = baoli, 
+              residz = xts(baozs_z12mt_zresid, index(baozs_z12mt_sd))["2022"] ) #???something goes wrong with principal
 
 qplot(baozs_sd12mtbk$bt_date, baozs_sd12mtbk$bt_nav, geom = c("point", "line"))
 plot.zoo(merge.xts(xts(log(baozs_backtest$bt_nav), baozs_backtest$bt_date),
@@ -300,8 +330,8 @@ signal_generator <- function(ref, residz){
   signal <- c()
   for(i in 1:length(residz)){
     signal <- c(signal, ifelse(
-      residz[i] > ref[i] & ref[i] > 0, -1, ifelse(
-        residz[i] < ref[i] & ref[i] <0, 1, 0)
+      abs(residz[i]) > ref[i] & residz[i] > 0 , -1, ifelse(
+        abs(residz[i]) > ref[i] & residz[i] < 0, 1, 0)
       )
     )
   }
@@ -319,11 +349,13 @@ backtest <- function(principal, signal, x, y, residz){
                    as.numeric(principal / exp(y[bt_date[1]])), 
               ifelse(signal[1] == -1,
                    as.numeric(principal / exp(x[bt_date[1]])),
-                   principal))
+                   0))
   #gross nav 
   bt_nav <- ifelse(signal[1] == 1, 
-                   as.numeric(exp(y[bt_date[1]]) * bt_pos[1]),
-                   as.numeric(exp(x[bt_date[1]]) * bt_pos[1]))
+                   as.numeric(exp(y[bt_date[1]]) * bt_pos[1]), ifelse(
+                     signal[1] == -1,
+                   as.numeric(exp(x[bt_date[1]]) * bt_pos[1]), principal)
+  )
   #the loop uses t+0 price for position switching
   for(i in 2:length(residz)){
     bt_pos <- c(bt_pos, ifelse(signal[i-1] * signal[i] == 1, bt_pos[i-1], 
@@ -333,22 +365,21 @@ backtest <- function(principal, signal, x, y, residz){
                       ifelse(signal[i] == -1, 
                         bt_pos[i-1] * exp(y[bt_date[i]]) / exp(x[bt_date[i]]), 
                         bt_pos[i-1])
-                    ), bt_pos[i-1])
+                    ), ifelse(signal[i-1] * signal[i] == 0, ifelse(
+                      signal[i] == 1, bt_nav[i-1] / exp(y[bt_date[i]]), ifelse(
+                        signal[i] == -1, bt_nav[i-1] / exp(x[bt_date[i]]), 
+                                                         bt_pos[i-1])),
+                    bt_pos[i-1])
+                    ))
                 )
-              )
-  }
   
-  for(i in 2:length(residz)){
     bt_nav <- c(bt_nav, ifelse(signal[i-1]*signal[i] == 1, ifelse(
       signal[i] == 1, bt_pos[i] * exp(y[bt_date[i]]), ifelse(signal[i] == -1, 
        bt_pos[i] * exp(x[bt_date[i]]), bt_nav[i-1])),
                 ifelse(signal[i-1] * signal[i] == -1, 
                   ifelse(signal[i] == 1, bt_pos[i] * exp(y[bt_date[i]]), 
                     ifelse(signal[i] == -1, bt_pos[i] * exp(x[bt_date[i]]), 
-                      ifelse(signal[i] == 1, bt_pos[i] * exp(y[bt_date[i]]), 
-                        ifelse(signal[i] == -1, bt_pos[i] * exp(x[bt_date[i]]), 
-                               bt_nav[i-1])))
-                    ), bt_nav[i-1])
+                           bt_nav[i-1])), bt_nav[i-1])
                    )
                   )
   }
