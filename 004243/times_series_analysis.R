@@ -167,7 +167,7 @@ baozs_z <- ur.df(resid(baozs_coint),
                   type = "none",
                   lags = 120,
                   selectlags = "AIC")
-summary(baozs_z) #!!!!!!good coint relation @1% 
+summary(baozs_z) #!!!!!!not reject @1% 
 
 #past 240 days rolling z to forecast/compare with the historical z
 baozs_z12mt_const <- rollapplyr(baozs_dly, function(ts){
@@ -248,8 +248,24 @@ plot.zoo(merge.zoo(baozs_z12mt_max, baozs_z12mt_median, baozs_z12mt_mean,
                    baozs_z12mt_sd, baozs_z12mt_min))
 
 #120days trailing
+baozs_z120dc <- rollapplyr(baozs_dly, function(ts){
+  coefficients(dynlm(ts[,1] ~ ts[,2]))[1]}, 
+  by.column = FALSE, width = 120, partial = FALSE)
+baozs_z120dr <- rollapplyr(baozs_dly, function(ts){
+  coefficients(dynlm(ts[,1] ~ ts[,2]))[2]}, 
+  by.column = FALSE, width = 120, partial = FALSE)
 
+baozs_z120d <- c()
+for(i in 1:length(baozs_z120d)){
+  baozs_z120d <- c(baozs_z120d, 
+    as.numeric(baozs_dly$`baoli["2020-10/"]`[i]) - (baozs_z120d[i] + 
+                  baozs_z12mt_gamma[i] * as.numeric(baozs_dly$zssk[i])))
+}
 
+summary(ur.df(baozs_z120d,
+              type = "none",
+              lags = 120,
+              selectlags = "AIC"))
 ######backtest######
 ####baoli/zssk####
 plot.zoo(resid(baozs_coint))
